@@ -137,11 +137,11 @@ def main(config: ArgsConfig):
     # ------------ step 1: load dataset ------------
     embodiment_tag = EmbodimentTag(config.embodiment_tag)
     
+    # 1.1 modality configs and transforms
+    # Currently assumes same modality across datasets - Shubham
     modality_path = os.path.join(config.dataset_path[0], LE_ROBOT_MODALITY_FILENAME)
     modality_dict = read_json(modality_path)
-
-    # 1.1 modality configs and transforms
-    data_config_cls = get_data_config(config.data_config. )
+    data_config_cls = get_data_config(config.data_config, modality_mapping=modality_dict, chunk_size=config.chunk_size)
     modality_configs = data_config_cls.modality_config()
     transforms = data_config_cls.transform()
 
