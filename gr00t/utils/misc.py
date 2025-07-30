@@ -23,6 +23,8 @@ from collections.abc import Sequence
 import numpy as np
 import torch
 import tree
+import json
+import os
 
 
 def any_describe_str(x, shape_only=False):
@@ -79,3 +81,30 @@ def any_describe(x, msg="", *, shape_only=False):
         msg += ": "
     print(msg, end="")
     pprint(tree.map_structure(lambda i: any_describe_str(i, shape_only=shape_only), x))
+
+
+def read_json(json_path: str) -> dict:
+    """
+    Reads a JSON file and returns its contents as a dictionary.
+
+    Args:
+        json_path (str): Path to the JSON file.
+
+    Returns:
+        dict: Parsed JSON data as a dictionary.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        ValueError: If the JSON is invalid or can't be parsed.
+    """
+    # Check if the file exists
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"The file {json_path} does not exist.")
+
+    # Open and read the JSON file
+    try:
+        with open(json_path, "r") as f:
+            data = json.load(f)
+        return data
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in file {json_path}: {str(e)}")

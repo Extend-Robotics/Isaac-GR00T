@@ -24,13 +24,14 @@ import torch
 import tyro
 from transformers import TrainingArguments
 
-from gr00t.data.dataset import LeRobotMixtureDataset, LeRobotSingleDataset
+from gr00t.data.dataset import LeRobotMixtureDataset, LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME
 from gr00t.data.schema import EmbodimentTag
-from gr00t.experiment.data_config import DATA_CONFIG_MAP
+from gr00t.experiment.data_config import DATA_CONFIG_MAP, get_data_config
 from gr00t.experiment.runner import TrainRunner
 from gr00t.model.gr00t_n1 import GR00T_N1_5
 from gr00t.model.transforms import EMBODIMENT_TAG_MAPPING
 from gr00t.utils.peft import get_lora_model
+from gr00t.utils.misc import read_json
 
 
 @dataclass
@@ -53,6 +54,9 @@ class ArgsConfig:
 
     max_steps: int = 10000
     """Maximum number of training steps."""
+    
+    chunk_size: int = 16
+    """Number of Action Chunks"""
 
     num_gpus: int = 1
     """Number of GPUs to use for training."""
@@ -132,9 +136,12 @@ def main(config: ArgsConfig):
     """Main training function."""
     # ------------ step 1: load dataset ------------
     embodiment_tag = EmbodimentTag(config.embodiment_tag)
+    
+    modality_path = os.path.join(config.dataset_path[0], LE_ROBOT_MODALITY_FILENAME)
+    modality_dict = read_json(modality_path)
 
     # 1.1 modality configs and transforms
-    data_config_cls = DATA_CONFIG_MAP[config.data_config]
+    data_config_cls = get_data_config(config.data_config. )
     modality_configs = data_config_cls.modality_config()
     transforms = data_config_cls.transform()
 

@@ -879,6 +879,83 @@ class AgibotGenie1DataConfig:
 
 ###########################################################################################
 
+
+class ExtendRoboticsDataConfig(BaseDataConfig):
+    def __init__(self, modality_mapping: dict, chunk_size: int):
+        self.modality_mapping = modality_mapping
+
+        # Extract keys and index ranges
+        self.state_keys = self._extract_sorted_keys("state")
+        self.action_keys = self._extract_sorted_keys("action")
+        self.video_keys = self._extract_video_keys("video")
+        self.language_keys = ["annotation.human.task_description"]
+        self.action_indices = list(range(chunk_size))
+        self.observation_indices = [0] 
+
+    def _extract_sorted_keys(self, key) -> list[str]:
+        modality_info = self.modality_mapping.get(key, {})
+        sorted_dict_keys = sorted(modality_info.keys())
+        return sorted_dict_keys
+
+    def _extract_video_keys(self, modality: str) -> list[str]:
+        modality_info = self.modality_mapping.get(modality, {})
+        return [modality_info[k]["original_key"] for k in sorted(modality_info.keys())]
+
+    def modality_config(self) -> dict[str, ModalityConfig]:
+        return {
+            "video": ModalityConfig(delta_indices=self.observation_indices, modality_keys=self.video_keys),
+            "state": ModalityConfig(delta_indices=self.observation_indices, modality_keys=self.state_keys),
+            "action": ModalityConfig(delta_indices=self.action_indices, modality_keys=self.action_keys),
+            "language": ModalityConfig(delta_indices=self.observation_indices, modality_keys=self.language_keys),
+        }
+
+    def transform(self) -> ModalityTransform:
+        transforms = [
+            # video transforms
+            VideoToTensor(apply_to=self.video_keys),
+            VideoCrop(apply_to=self.video_keys, scale=0.95),
+            VideoResize(apply_to=self.video_keys, height=224, width=224, interpolation="linear"),
+            VideoColorJitter(
+                apply_to=self.video_keys,
+                brightness=0.3,
+                contrast=0.4,
+                saturation=0.5,
+                hue=0.08,
+            ),
+            VideoToNumpy(apply_to=self.video_keys),
+
+            # state transforms
+            StateActionToTensor(apply_to=self.state_keys),
+            StateActionSinCosTransform(apply_to=self.state_keys),
+
+            # action transforms
+            StateActionToTensor(apply_to=self.action_keys),
+            StateActionTransform(
+                apply_to=self.action_keys,
+                normalization_modes={key: "min_max" for key in self.action_keys},
+            ),
+
+            # concat transforms
+            ConcatTransform(
+                video_concat_order=self.video_keys,
+                state_concat_order=self.state_keys,
+                action_concat_order=self.action_keys,
+            ),
+
+            # model-specific transform
+            GR00TTransform(
+                state_horizon=len(self.observation_indices),
+                action_horizon=len(self.action_indices),
+                max_state_dim=64,
+                max_action_dim=32,
+            ),
+        ]
+
+        return ComposedModalityTransform(transforms=transforms)
+    
+###########################################################################################
+    
+
 DATA_CONFIG_MAP = {
     "fourier_gr1_arms_waist": FourierGr1ArmsWaistDataConfig(),
     "fourier_gr1_arms_only": FourierGr1ArmsOnlyDataConfig(),
@@ -893,3 +970,25 @@ DATA_CONFIG_MAP = {
     "oxe_droid": OxeDroidDataConfig(),
     "agibot_genie1": AgibotGenie1DataConfig(),
 }
+
+DYNAMIC_DATA_CONFIG_MAP = {
+    "extend_robotics_dynamic": ExtendRoboticsDataConfig,
+}
+
+###########################################################################################
+
+
+def get_data_config(name: str, **kwargs):
+    """
+    Get a data config instance by name.
+
+    For static configs, kwargs are ignored.
+
+    For dynamic configs, kwargs are passed to the constructor.
+    """
+    if name in DATA_CONFIG_MAP:
+        return DATA_CONFIG_MAP[name]
+    elif name in DYNAMIC_DATA_CONFIG_MAP:
+        return DYNAMIC_DATA_CONFIG_MAP[name](**kwargs)
+    else:
+        raise ValueError(f"Unknown data config name: {name}")
