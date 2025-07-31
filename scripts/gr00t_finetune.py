@@ -26,7 +26,7 @@ from transformers import TrainingArguments
 
 from gr00t.data.dataset import LeRobotMixtureDataset, LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME
 from gr00t.data.schema import EmbodimentTag
-from gr00t.experiment.data_config import DATA_CONFIG_MAP, get_data_config
+from gr00t.experiment.data_config import DATA_CONFIG_MAP, DYNAMIC_DATA_CONFIG_MAP, get_data_config
 from gr00t.experiment.runner import TrainRunner
 from gr00t.model.gr00t_n1 import GR00T_N1_5
 from gr00t.model.transforms import EMBODIMENT_TAG_MAPPING
@@ -45,7 +45,7 @@ class ArgsConfig:
     output_dir: str = "/tmp/gr00t"
     """Directory to save model checkpoints."""
 
-    data_config: Literal[tuple(DATA_CONFIG_MAP.keys())] = "fourier_gr1_arms_only"
+    data_config: Literal[tuple(DATA_CONFIG_MAP.keys()) + tuple(DYNAMIC_DATA_CONFIG_MAP.keys())] = "fourier_gr1_arms_only"
     """Data configuration name from DATA_CONFIG_MAP, we assume all datasets have the same data config"""
 
     # Training parameters
