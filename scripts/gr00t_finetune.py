@@ -146,7 +146,7 @@ def main(config: ArgsConfig):
     modality_path = os.path.join(config.dataset_path[0], LE_ROBOT_MODALITY_FILENAME)
     modality_dict = read_json(modality_path)
     data_config_cls = get_data_config(name=config.data_config, 
-                                      modality_mapping=modality_dict, 
+                                      modality_map=modality_dict, 
                                       chunk_size=config.chunk_size,
                                       action_dim=config.action_dim)
     modality_configs = data_config_cls.modality_config()
