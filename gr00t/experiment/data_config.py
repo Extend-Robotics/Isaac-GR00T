@@ -882,8 +882,8 @@ class AgibotGenie1DataConfig:
 
 
 class ExtendRoboticsDataConfig(BaseDataConfig):
-    def __init__(self, modality_mapping: dict, chunk_size: int, action_dim: Optional[int]=None):
-        self.modality_mapping = modality_mapping
+    def __init__(self, modality_map: dict, chunk_size: int, action_dim: Optional[int]=None):
+        self.modality_map = modality_map
 
         # Extract keys and index ranges
         self.state_keys = self._extract_sorted_keys("state")
@@ -894,10 +894,10 @@ class ExtendRoboticsDataConfig(BaseDataConfig):
         self.action_dim = action_dim
         self.observation_indices = [0] 
 
-    def _extract_sorted_keys(self, key) -> list[str]:
-        modality_info = self.modality_mapping.get(key, {})
+    def _extract_sorted_keys(self, modality_key) -> list[str]:
+        modality_info = self.modality_map.get(modality_key, {})
         sorted_dict_keys = sorted(modality_info.keys())
-        return [f"{key}.{sub_key}" for sub_key in sorted_dict_keys]
+        return [f"{modality_key}.{sub_key}" for sub_key in sorted_dict_keys]
 
     def modality_config(self) -> dict[str, ModalityConfig]:
         return {
