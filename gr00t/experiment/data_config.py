@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from gr00t.data.dataset import ModalityConfig
 from gr00t.data.transform.base import ComposedModalityTransform, ModalityTransform
@@ -881,25 +882,22 @@ class AgibotGenie1DataConfig:
 
 
 class ExtendRoboticsDataConfig(BaseDataConfig):
-    def __init__(self, modality_mapping: dict, chunk_size: int):
+    def __init__(self, modality_mapping: dict, chunk_size: int, action_dim: Optional[int]=None):
         self.modality_mapping = modality_mapping
 
         # Extract keys and index ranges
         self.state_keys = self._extract_sorted_keys("state")
         self.action_keys = self._extract_sorted_keys("action")
-        self.video_keys = self._extract_video_keys("video")
+        self.video_keys = self._extract_sorted_keys("video")
         self.language_keys = ["annotation.human.task_description"]
         self.action_indices = list(range(chunk_size))
+        self.action_dim = action_dim
         self.observation_indices = [0] 
 
     def _extract_sorted_keys(self, key) -> list[str]:
         modality_info = self.modality_mapping.get(key, {})
         sorted_dict_keys = sorted(modality_info.keys())
-        return sorted_dict_keys
-
-    def _extract_video_keys(self, modality: str) -> list[str]:
-        modality_info = self.modality_mapping.get(modality, {})
-        return [modality_info[k]["original_key"] for k in sorted(modality_info.keys())]
+        return [f"{key}.{sub_key}" for sub_key in sorted_dict_keys]
 
     def modality_config(self) -> dict[str, ModalityConfig]:
         return {
@@ -947,7 +945,7 @@ class ExtendRoboticsDataConfig(BaseDataConfig):
                 state_horizon=len(self.observation_indices),
                 action_horizon=len(self.action_indices),
                 max_state_dim=64,
-                max_action_dim=32,
+                max_action_dim=self.action_dim if self.action_dim is not None else 32,
             ),
         ]
 

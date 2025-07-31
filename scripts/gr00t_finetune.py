@@ -57,6 +57,10 @@ class ArgsConfig:
     
     chunk_size: int = 16
     """Number of Action Chunks"""
+    
+    # Action dimension
+    action_dim: int = 32
+    """Action dimension for the model output."""
 
     num_gpus: int = 1
     """Number of GPUs to use for training."""
@@ -141,7 +145,10 @@ def main(config: ArgsConfig):
     # Currently assumes same modality across datasets - Shubham
     modality_path = os.path.join(config.dataset_path[0], LE_ROBOT_MODALITY_FILENAME)
     modality_dict = read_json(modality_path)
-    data_config_cls = get_data_config(config.data_config, modality_mapping=modality_dict, chunk_size=config.chunk_size)
+    data_config_cls = get_data_config(name=config.data_config, 
+                                      modality_mapping=modality_dict, 
+                                      chunk_size=config.chunk_size,
+                                      action_dim=config.action_dim)
     modality_configs = data_config_cls.modality_config()
     transforms = data_config_cls.transform()
 
@@ -191,10 +198,12 @@ def main(config: ArgsConfig):
     # Load model
     model = GR00T_N1_5.from_pretrained(
         pretrained_model_name_or_path=config.base_model_path,
+        action_dim=config.action_dim,
         tune_llm=config.tune_llm,  # backbone's LLM
         tune_visual=config.tune_visual,  # backbone's vision tower
         tune_projector=config.tune_projector,  # action head's projector
-        tune_diffusion_model=config.tune_diffusion_model,  # action head's DiT
+        tune_diffusion_model=config.tune_diffusion_model,  # action head's DiT,
+        ignore_mismatched_sizes=True,
     )
 
     # Update action_horizon to match data config
