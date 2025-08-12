@@ -1,0 +1,31 @@
+name: Upload Sagemaker Release to S3
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  upload-to-s3:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Archive
+        run: |
+          mkdir -p upload_dir
+          cp -r groot upload_dir/
+          cp scripts/groot_finetune.py upload_dir/
+          tar -czf sourcedir.tar.gz -C upload_dir .
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:  ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp sourcedir.tar.gz s3://${{ vars.S3_BUCKET }}/${{ vars.MODEL_FOLDER }}/${{ github.event.release.tag_name }}/sourcedir.tar.gz
