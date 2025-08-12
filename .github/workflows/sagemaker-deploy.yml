@@ -15,8 +15,8 @@ jobs:
       - name: Create Archive
         run: |
           mkdir -p upload_dir
-          cp -r groot upload_dir/
-          cp scripts/groot_finetune.py upload_dir/
+          cp -r gr00t upload_dir/
+          cp scripts/gr00t_finetune.py upload_dir/
           tar -czf sourcedir.tar.gz -C upload_dir .
 
       - name: Configure AWS Credentials
