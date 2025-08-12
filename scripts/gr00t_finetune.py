@@ -142,9 +142,22 @@ def main(config: ArgsConfig):
     embodiment_tag = EmbodimentTag(config.embodiment_tag)
     
     # 1.1 modality configs and transforms
-    # Currently assumes same modality across datasets - Shubham
+    # Currently assumes same modality across datasets
     modality_path = os.path.join(config.dataset_path[0], LE_ROBOT_MODALITY_FILENAME)
     modality_dict = read_json(modality_path)
+    # check modality consistency
+    if len(config.dataset_path) > 1:
+        for other_path in config.dataset_path[1:]:
+            other_modality_path = os.path.join(other_path, LE_ROBOT_MODALITY_FILENAME)
+            assert os.path.exists(other_modality_path), f"Missing modality file: {other_modality_path}"
+            other_modality_dict = read_json(other_modality_path)
+            if modality_dict != other_modality_dict:
+                raise ValueError(
+                    f"Modality mismatch between datasets:\n"
+                    f"{config.dataset_path[0]} -> {modality_dict}\n"
+                    f"{other_path} -> {other_modality_dict}"
+            )
+    
     data_config_cls = get_data_config(name=config.data_config, 
                                       modality_map=modality_dict, 
                                       chunk_size=config.chunk_size,
