@@ -22,6 +22,7 @@ from typing import List, Literal
 
 import torch
 import tyro
+from datetime
 from transformers import TrainingArguments
 
 from gr00t.data.dataset import LeRobotMixtureDataset, LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME
@@ -42,7 +43,7 @@ class ArgsConfig:
     dataset_path: List[str]
     """Path to the dataset directory or directories"""
 
-    output_dir: str = "/tmp/gr00t"
+    output_dir: str = os.getenv('CHECKPOINT_DIR', f"/tmp/groot-{datetime.now().strftime('%Y%m%d_%H%M%S')}")
     """Directory to save model checkpoints."""
 
     data_config: Literal[tuple(DATA_CONFIG_MAP.keys()) + tuple(DYNAMIC_DATA_CONFIG_MAP.keys())] = "extend_robotics_dynamic"
