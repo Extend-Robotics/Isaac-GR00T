@@ -22,7 +22,7 @@ from typing import List, Literal
 
 import torch
 import tyro
-from datetime
+from datetime import datetime
 from transformers import TrainingArguments
 
 from gr00t.data.dataset import LeRobotMixtureDataset, LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME
@@ -113,7 +113,7 @@ class ArgsConfig:
     dataloader_num_workers: int = 8
     """Number of workers for data loading."""
 
-    report_to: Literal["wandb", "tensorboard", "azure_ml"] = "wandb"
+    report_to: Literal["wandb", "tensorboard", "azure_ml"] = "tensorboard"
     """Where to report training metrics (e.g., 'wandb', 'tensorboard', 'azure_ml')."""
 
     # Data loading parameters
