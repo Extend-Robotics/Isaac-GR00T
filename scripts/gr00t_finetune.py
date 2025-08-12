@@ -45,7 +45,7 @@ class ArgsConfig:
     output_dir: str = "/tmp/gr00t"
     """Directory to save model checkpoints."""
 
-    data_config: Literal[tuple(DATA_CONFIG_MAP.keys()) + tuple(DYNAMIC_DATA_CONFIG_MAP.keys())] = "fourier_gr1_arms_only"
+    data_config: Literal[tuple(DATA_CONFIG_MAP.keys()) + tuple(DYNAMIC_DATA_CONFIG_MAP.keys())] = "extend_robotics_dynamic"
     """Data configuration name from DATA_CONFIG_MAP, we assume all datasets have the same data config"""
 
     # Training parameters
