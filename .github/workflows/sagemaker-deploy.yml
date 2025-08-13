@@ -61,7 +61,7 @@ jobs:
             # safe get total_count (0 if missing) and then look for our runner
             COUNT=$(echo "$RESP" | jq '.total_count // 0')
             if [ "$COUNT" -gt 0 ] && echo "$RESP" \
-                | jq -e '.runners[] | select(.name=="gcp-runner" and .status=="online")' \
+                | jq -e '.runners[] | select(.name=="extend-gh-runner-with-gpu" and .status=="online")' \
                 >& /dev/null; then
               echo "GCP runner is online"
               exit 0
