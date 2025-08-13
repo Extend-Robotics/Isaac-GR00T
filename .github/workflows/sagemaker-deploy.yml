@@ -43,7 +43,7 @@ jobs:
 
       - name: Start GCP VM
         run: |
-          echo "Starting GCP VM $VM_NAME..."
+          echo "Starting GCP VM ${{ secrets.GCP_VM_NAME }}..."
           gcloud compute instances start ${{ secrets.GCP_VM_NAME }} --zone=${{ secrets.GCP_VM_ZONE }}
 
       - name: Wait for GCP Runner to be Available
