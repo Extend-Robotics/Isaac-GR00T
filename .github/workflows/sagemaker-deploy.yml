@@ -118,4 +118,4 @@ jobs:
       - name: Stop GCP VM
         run: |
           echo "Stopping GCP VM ${{ secrets.GCP_VM_NAME }}..."
-          gcloud compute stop ${{ secrets.GCP_VM_NAME }} --zone=${{ secrets.GCP_VM_ZONE }}
+          gcloud compute instances stop ${{ secrets.GCP_VM_NAME }} --zone=${{ secrets.GCP_VM_ZONE }}
