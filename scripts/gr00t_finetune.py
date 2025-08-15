@@ -16,7 +16,7 @@
 import os
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Literal
 
@@ -35,15 +35,31 @@ from gr00t.utils.peft import get_lora_model
 from gr00t.utils.misc import read_json
 
 
+def auto_detect_sagemaker_datasets(channel: str = "DATASET_DIR") -> List[str]:
+    """Auto-detect lerobot dataset directories from a SageMaker input channel."""
+    sm_channel_path = os.getenv(f"SM_CHANNEL_{channel}")
+    if not sm_channel_path or not Path(sm_channel_path).exists():
+        return []
+    return [
+        str(p)
+        for p in Path(sm_channel_path).rglob("*")
+        if p.is_dir() and "lerobot" in p.name.lower()
+    ]
+
 @dataclass
 class ArgsConfig:
     """Configuration for GR00T model fine-tuning."""
 
     # Dataset parameters
-    dataset_path: List[str]
+    dataset_path: List[str] = field(default_factory=lambda: auto_detect_sagemaker_datasets())
     """Path to the dataset directory or directories"""
 
-    output_dir: str = os.getenv('CHECKPOINT_DIR', f"/tmp/groot-{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    output_dir: str = field(
+        default_factory=lambda: os.getenv(
+            "CHECKPOINT_DIR",
+            f"/tmp/groot-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+    )
     """Directory to save model checkpoints."""
 
     data_config: Literal[tuple(DATA_CONFIG_MAP.keys()) + tuple(DYNAMIC_DATA_CONFIG_MAP.keys())] = "extend_robotics_dynamic"
@@ -141,7 +157,7 @@ def main(config: ArgsConfig):
     """Main training function."""
     # ------------ step 1: load dataset ------------
     embodiment_tag = EmbodimentTag(config.embodiment_tag)
-    
+    assert len(config.dataset_path) != 0
     # 1.1 modality configs and transforms
     # Currently assumes same modality across datasets
     modality_path = os.path.join(config.dataset_path[0], LE_ROBOT_MODALITY_FILENAME)
