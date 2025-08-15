@@ -16,6 +16,7 @@
 import os
 import subprocess
 import sys
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Literal
@@ -35,6 +36,8 @@ from gr00t.utils.peft import get_lora_model
 from gr00t.utils.misc import read_json
 
 
+TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+
 def auto_detect_sagemaker_datasets(channel: str = "DATASET_DIR") -> List[str]:
     """Auto-detect lerobot dataset directories from a SageMaker input channel."""
     sm_channel_path = os.getenv(f"SM_CHANNEL_{channel}")
@@ -45,6 +48,47 @@ def auto_detect_sagemaker_datasets(channel: str = "DATASET_DIR") -> List[str]:
         for p in Path(sm_channel_path).rglob("*")
         if p.is_dir() and "lerobot" in p.name.lower()
     ]
+
+
+def copy_training_outputs(output_dir: str, model_dir: str):
+    """
+    Copy relevant files from output_dir to model_dir after training.
+
+    Files to copy:
+      - experiment_cfg/ folder
+      - config.json
+      - model-00001-of-00003.safetensors
+      - model-00002-of-00003.safetensors
+      - model-00003-of-00003.safetensors
+      - model.safetensors.index.json
+    """
+    output_path = Path(output_dir)
+    model_path = Path(model_dir)
+    model_path.mkdir(parents=True, exist_ok=True)
+
+    # Copy experiment_cfg folder
+    exp_cfg_src = output_path / "experiment_cfg"
+    if exp_cfg_src.exists() and exp_cfg_src.is_dir():
+        exp_cfg_dst = model_path / "experiment_cfg"
+        if exp_cfg_dst.exists():
+            shutil.rmtree(exp_cfg_dst)
+        shutil.copytree(exp_cfg_src, exp_cfg_dst)
+    
+    # List of individual files to copy
+    files_to_copy = [
+        "config.json",
+        "model-00001-of-00003.safetensors",
+        "model-00002-of-00003.safetensors",
+        "model-00003-of-00003.safetensors",
+        "model.safetensors.index.json",
+    ]
+
+    for filename in files_to_copy:
+        src_file = output_path / filename
+        if src_file.exists() and src_file.is_file():
+            shutil.copy2(src_file, model_path / filename)
+        else:
+            print(f"Warning: {filename} not found in {output_dir}")
 
 @dataclass
 class ArgsConfig:
@@ -57,10 +101,18 @@ class ArgsConfig:
     output_dir: str = field(
         default_factory=lambda: os.getenv(
             "CHECKPOINT_DIR",
-            f"/tmp/groot-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            str(Path.home() / ".cache" / f"groot-{TIMESTAMP}" / "checkpoints")
         )
     )
     """Directory to save model checkpoints."""
+
+    model_dir: str = field(
+        default_factory=lambda: os.getenv(
+            "SM_MODEL_DIR",
+            str(Path.home() / ".cache" / f"groot-{TIMESTAMP}" / "model")
+        )
+    )
+    """Directory to save the final trained model."""
 
     data_config: Literal[tuple(DATA_CONFIG_MAP.keys()) + tuple(DYNAMIC_DATA_CONFIG_MAP.keys())] = "extend_robotics_dynamic"
     """Data configuration name from DATA_CONFIG_MAP, we assume all datasets have the same data config"""
