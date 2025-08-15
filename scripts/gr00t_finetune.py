@@ -383,6 +383,10 @@ def main(config: ArgsConfig):
 
     # 2.3 run experiment
     experiment.train()
+    
+    # 2.4 copy outputs to model_dir after training
+    copy_training_outputs(config.output_dir, config.model_dir)
+    print(f"Training outputs copied to {config.model_dir}")
 
 
 if __name__ == "__main__":
