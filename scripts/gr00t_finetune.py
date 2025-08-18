@@ -81,6 +81,10 @@ def copy_training_outputs(output_dir: str, model_dir: str):
 @dataclass
 class ArgsConfig:
     """Configuration for GR00T model fine-tuning."""
+    
+    # policy class
+    policy_class: Literal["GR00T_N1_5"] = "GR00T_N1_5"
+    """The policy class to use for training. Currently only 'GR00T_N1_5' is supported."""
 
     # Dataset parameters
     dataset_path: List[str] = field(default_factory=lambda: auto_detect_sagemaker_datasets())
