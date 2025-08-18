@@ -141,19 +141,19 @@ class ArgsConfig:
     base_model_path: str = "nvidia/GR00T-N1.5-3B"
     """Path or HuggingFace model ID for the base model."""
 
-    tune_llm: bool = False
+    tune_llm: Literal[True, False] = False
     """Whether to fine-tune the language model backbone."""
 
-    tune_visual: bool = False
+    tune_visual: Literal[True, False] = False
     """Whether to fine-tune the vision tower."""
 
-    tune_projector: bool = True
+    tune_projector: Literal[True, False] = True
     """Whether to fine-tune the projector."""
 
-    tune_diffusion_model: bool = True
+    tune_diffusion_model: Literal[True, False] = True
     """Whether to fine-tune the diffusion model."""
 
-    resume: bool = False
+    resume: Literal[True, False] = False
     """Whether to resume from a checkpoint."""
 
     # Advanced training parameters
