@@ -56,11 +56,8 @@ def copy_training_outputs(output_dir: str, model_dir: str):
 
     Files to copy:
       - experiment_cfg/ folder
-      - config.json
-      - model-00001-of-00003.safetensors
-      - model-00002-of-00003.safetensors
-      - model-00003-of-00003.safetensors
-      - model.safetensors.index.json
+      - any .json files
+      - any .safetensors files
     """
     output_path = Path(output_dir)
     model_path = Path(model_dir)
@@ -73,22 +70,13 @@ def copy_training_outputs(output_dir: str, model_dir: str):
         if exp_cfg_dst.exists():
             shutil.rmtree(exp_cfg_dst)
         shutil.copytree(exp_cfg_src, exp_cfg_dst)
-    
-    # List of individual files to copy
-    files_to_copy = [
-        "config.json",
-        "model-00001-of-00003.safetensors",
-        "model-00002-of-00003.safetensors",
-        "model-00003-of-00003.safetensors",
-        "model.safetensors.index.json",
-    ]
 
-    for filename in files_to_copy:
-        src_file = output_path / filename
-        if src_file.exists() and src_file.is_file():
-            shutil.copy2(src_file, model_path / filename)
-        else:
-            print(f"Warning: {filename} not found in {output_dir}")
+    # Copy all .json and .safetensors files
+    for file_path in output_path.glob("*.json"):
+        shutil.copy2(file_path, model_path / file_path.name)
+
+    for file_path in output_path.glob("*.safetensors"):
+        shutil.copy2(file_path, model_path / file_path.name)
 
 @dataclass
 class ArgsConfig:
