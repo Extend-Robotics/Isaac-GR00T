@@ -38,8 +38,8 @@ class LivePlotCallback(TrainerCallback):
     """
 
     def __init__(self, output_dir: str = ".", metrics: Optional[list[str]] = None):
-        self.output_dir = output_dir
-        os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
+        self.output_plot_dir = os.path.join(output_dir, "plots")
+        os.makedirs(self.output_plot_dir, exist_ok=True)
         self.metrics = metrics
         self.history = {}
 
@@ -63,14 +63,14 @@ class LivePlotCallback(TrainerCallback):
         for metric, points in self.history.items():
             steps, values = zip(*points)
             plt.figure()
-            plt.plot(steps, values, marker="o-", label=metric)
+            plt.plot(steps, values, marker='o', linestyle='-', label=metric)
             plt.xlabel("Step")
             plt.ylabel(metric)
             plt.title(f"{metric} over training")
             plt.legend()
             plt.grid(True)
             plt.tight_layout()
-            plt.savefig(os.path.join(self.output_dir, f"{metric}_curve.png"))
+            plt.savefig(os.path.join(self.output_plot_dir, f"{metric}_curve.png"))
             plt.close()
 
 
