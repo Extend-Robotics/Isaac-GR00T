@@ -18,8 +18,10 @@ import os
 from pathlib import Path
 
 import torch
+import matplotlib.pyplot as plt
+from typing import Optional
 from transformers import TrainingArguments, set_seed
-
+from transformers.trainer_callback import TrainerCallback
 from gr00t.data.dataset import LeRobotMixtureDataset, LeRobotSingleDataset
 from gr00t.experiment.trainer import DualBrainTrainer
 from gr00t.model.gr00t_n1 import GR00T_N1_5
@@ -28,6 +30,48 @@ from gr00t.utils.experiment import (
     CheckpointFormatCallback,
     safe_save_model_for_hf_trainer,
 )
+
+class LivePlotCallback(TrainerCallback):
+    """
+    A general TrainerCallback to live-plot any metrics reported by Hugging Face Trainer.
+    Saves plots as PNGs in `output_dir`.
+    """
+
+    def __init__(self, output_dir: str = ".", metrics: Optional[list[str]] = None):
+        self.output_dir = output_dir
+        os.makedirs(os.path.join(output_dir, "plots"), exist_ok=True)
+        self.metrics = metrics
+        self.history = {}
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None:
+            return
+
+        for key, value in logs.items():
+            if not isinstance(value, (int, float)):
+                continue
+            if self.metrics is not None and key not in self.metrics:
+                continue
+
+            if key not in self.history:
+                self.history[key] = []
+            self.history[key].append((state.global_step, value))
+
+        self._plot_all()
+
+    def _plot_all(self):
+        for metric, points in self.history.items():
+            steps, values = zip(*points)
+            plt.figure()
+            plt.plot(steps, values, marker="o-", label=metric)
+            plt.xlabel("Step")
+            plt.ylabel(metric)
+            plt.title(f"{metric} over training")
+            plt.legend()
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir, f"{metric}_curve.png"))
+            plt.close()
 
 
 class TrainRunner:
@@ -146,6 +190,7 @@ class TrainRunner:
             train_dataset=train_dataset,
             data_collator=data_collator,
             compute_dtype=compute_dtype,
+            callbacks=[LivePlotCallback(output_dir=training_args.output_dir)]
         )
 
         # Add checkpoint format callback to ensure experiment_cfg is copied to each checkpoint
