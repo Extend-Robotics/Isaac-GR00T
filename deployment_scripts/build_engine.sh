@@ -60,7 +60,7 @@ VIT_SEQ_LEN=$((NUM_CAMERAS * 256))
 echo "Using parameters:"
 echo "  num_cameras = ${NUM_CAMERAS}"
 echo "  action_dim  = ${ACTION_DIM}"
-echo "  output_path = ${OUTPUT_PATH}"
+echo "  output_engine_path = ${OUTPUT_ENGINE_PATH}"
 echo "  min_len     = ${MIN_LEN}"
 echo "  opt_len     = ${OPT_LEN}"
 echo "  max_len     = ${MAX_LEN}"
