@@ -42,7 +42,7 @@ def eagle_tensorrt_forward(self, vl_input):
     self.vit_engine.set_runtime_tensor_shape("pixel_values", vl_input["pixel_values"].shape)
     self.vit_engine.set_runtime_tensor_shape("position_ids", position_ids.shape)
     vit_embeds = self.vit_engine(vl_input["pixel_values"], position_ids)["vit_embeds"]
-
+    vit_embeds = vit_embeds.view(1, -1, vit_embeds.shape[-1]) # [num_cameras, 256, 1152] -> [1, num_cameras*256, 1152]
     self.llm_engine.set_runtime_tensor_shape("input_ids", vl_input["input_ids"].shape)
     self.llm_engine.set_runtime_tensor_shape("vit_embeds", vit_embeds.shape)
     self.llm_engine.set_runtime_tensor_shape("attention_mask", vl_input["attention_mask"].shape)
