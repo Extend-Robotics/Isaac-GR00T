@@ -22,9 +22,10 @@ from action_head_utils import action_head_pytorch_forward
 from trt_model_forward import setup_tensorrt_engines
 
 import gr00t
-from gr00t.data.dataset import LeRobotSingleDataset
-from gr00t.experiment.data_config import DATA_CONFIG_MAP
+from gr00t.data.dataset import LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME
+from gr00t.experiment.data_config import get_data_config, DATA_CONFIG_MAP, DYNAMIC_DATA_CONFIG_MAP
 from gr00t.model.policy import Gr00tPolicy
+from gr00t.utils.misc import read_json
 
 
 def compare_predictions(pred_tensorrt, pred_torch):
@@ -93,6 +94,14 @@ def compare_predictions(pred_tensorrt, pred_torch):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run GR00T inference")
+
+    parser.add_argument(
+        "--dataset_path",
+        type=str,
+        help="Path to the dataset",
+        default=os.path.join(os.getcwd(), "demo_data/robot_sim.PickNPlace"),
+    )
+
     parser.add_argument(
         "--model_path", type=str, default="nvidia/GR00T-N1.5-3B", help="Path to the GR00T model"
     )
@@ -109,6 +118,37 @@ if __name__ == "__main__":
         help="Number of denoising steps",
         default=4,
     )
+
+    parser.add_argument(
+        "--data_config",
+        type=str,
+        choices=list(DATA_CONFIG_MAP.keys()) + list(DYNAMIC_DATA_CONFIG_MAP.keys()),
+        help=f"Data configuration name. Available options: {', '.join(list(DATA_CONFIG_MAP.keys()) + list(DYNAMIC_DATA_CONFIG_MAP.keys()))}",
+        default="extend_robotics_dynamic",
+    )
+
+    parser.add_argument(
+        "--action_dim",
+        type=int,
+        default=32,
+        help="Dimensionality of the action space",
+    )
+
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        default=16,
+        help="Size of each data chunk",
+    )
+
+    parser.add_argument(
+        "--video_backend",
+        type=str,
+        choices=["torchvision_av", "decord"],
+        default="torchvision_av",
+        help="Backend for video processing",
+    )
+
     parser.add_argument(
         "--trt_engine_path",
         type=str,
@@ -117,19 +157,34 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    MODEL_PATH = args.model_path
-    REPO_PATH = os.path.dirname(os.path.dirname(gr00t.__file__))
-    DATASET_PATH = os.path.join(REPO_PATH, "demo_data/robot_sim.PickNPlace")
-    EMBODIMENT_TAG = "gr1"
+    modality_path = os.path.join(args.dataset_path, LE_ROBOT_MODALITY_FILENAME)
+    modality_dict = read_json(modality_path)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    data_config = DATA_CONFIG_MAP["fourier_gr1_arms_only"]
-    modality_config = data_config.modality_config()
-    modality_transform = data_config.transform()
+    data_config_obj = get_data_config(name=args.data_config,
+                                  modality_map=modality_dict,
+                                  chunk_size=args.chunk_size,
+                                  action_dim=args.action_dim
+                                  )
+    modality_config = data_config_obj.modality_config()
+    modality_transform = data_config_obj.transform()
+
+    if args.data_config in (
+        "fourier_gr1_arms_waist",
+        "fourier_gr1_arms_only",
+        "fourier_gr1_full_upper_body",
+    ):
+        EMBODIMENT_TAG = "gr1"
+    elif args.data_config == "oxe_droid":
+        EMBODIMENT_TAG = "oxe_droid"
+    elif args.data_config == "agibot_genie1":
+        EMBODIMENT_TAG = "agibot_genie1"
+    else:
+        EMBODIMENT_TAG = "new_embodiment"
 
     policy = Gr00tPolicy(
-        model_path=MODEL_PATH,
+        model_path=args.model_path,
         embodiment_tag=EMBODIMENT_TAG,
         modality_config=modality_config,
         modality_transform=modality_transform,
@@ -139,9 +194,9 @@ if __name__ == "__main__":
 
     modality_config = policy.modality_config
     dataset = LeRobotSingleDataset(
-        dataset_path=DATASET_PATH,
+        dataset_path=args.dataset_path,
         modality_configs=modality_config,
-        video_backend="decord",
+        video_backend=args.video_backend,
         video_backend_kwargs=None,
         transforms=None,  # We'll handle transforms separately through the policy
         embodiment_tag=EMBODIMENT_TAG,
