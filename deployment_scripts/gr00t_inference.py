@@ -77,7 +77,8 @@ def compare_predictions(pred_tensorrt, pred_torch):
         l1_dist = torch.abs(flat_tensorrt - flat_torch)
 
         print(f"\n{key}:")
-        print(f'{"Cosine Similarity (PyTorch/TensorRT):".ljust(max_label_width)} {cos_sim.item()}')
+        print(
+            f'{"Cosine Similarity (PyTorch/TensorRT):".ljust(max_label_width)} {cos_sim.item()}')
         print(
             f'{"L1 Mean/Max Distance (PyTorch/TensorRT):".ljust(max_label_width)} {l1_dist.mean().item():.4f}/{l1_dist.max().item():.4f}'
         )
@@ -122,7 +123,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_config",
         type=str,
-        choices=list(DATA_CONFIG_MAP.keys()) + list(DYNAMIC_DATA_CONFIG_MAP.keys()),
+        choices=list(DATA_CONFIG_MAP.keys()) +
+        list(DYNAMIC_DATA_CONFIG_MAP.keys()),
         help=f"Data configuration name. Available options: {', '.join(list(DATA_CONFIG_MAP.keys()) + list(DYNAMIC_DATA_CONFIG_MAP.keys()))}",
         default="extend_robotics_dynamic",
     )
@@ -163,10 +165,10 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     data_config_obj = get_data_config(name=args.data_config,
-                                  modality_map=modality_dict,
-                                  chunk_size=args.chunk_size,
-                                  action_dim=args.action_dim
-                                  )
+                                      modality_map=modality_dict,
+                                      chunk_size=args.chunk_size,
+                                      action_dim=args.action_dim
+                                      )
     modality_config = data_config_obj.modality_config()
     modality_transform = data_config_obj.transform()
 
@@ -223,7 +225,8 @@ if __name__ == "__main__":
         # ensure PyTorch and TensorRT have the same init_actions
         if not hasattr(policy.model.action_head, "init_actions"):
             policy.model.action_head.init_actions = torch.randn(
-                (1, policy.model.action_head.action_horizon, policy.model.action_head.action_dim),
+                (1, policy.model.action_head.action_horizon,
+                 policy.model.action_head.action_dim),
                 dtype=torch.float16,
                 device=device,
             )
