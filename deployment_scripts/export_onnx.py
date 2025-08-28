@@ -28,10 +28,11 @@ from transformers.models.siglip.modeling_siglip import (
     SiglipVisionTransformer,
 )
 
-from gr00t.data.dataset import LeRobotSingleDataset
-from gr00t.experiment.data_config import DATA_CONFIG_MAP
+from gr00t.data.dataset import LeRobotSingleDataset, LE_ROBOT_MODALITY_FILENAME
+from gr00t.experiment.data_config import get_data_config, DATA_CONFIG_MAP, DYNAMIC_DATA_CONFIG_MAP
 from gr00t.model.backbone.eagle_backbone import DEFAULT_EAGLE_PATH, EagleBackbone
 from gr00t.model.policy import Gr00tPolicy, unsqueeze_dict_values
+from gr00t.utils.misc import read_json
 
 
 def get_input_info(policy, observations):
@@ -231,7 +232,7 @@ def export_eagle2_llm(backbone_model, backbone_config, output_dir, attention_mas
             do_constant_folding=True,
             dynamic_axes={
                 "input_ids": {0: "batch_size", 1: "sequence_length"},
-                "vit_embeds": {0: "batch_size"},
+                "vit_embeds": {0: "batch_size", 1: "vit_seq_len"},
                 "attention_mask": {0: "batch_size", 1: "sequence_length"},
                 "embeddings": {0: "batch_size", 1: "sequence_length"},
             },
@@ -389,14 +390,36 @@ def run_groot_inference(
     dataset_path: str,
     model_path: str,
     onnx_model_path: str,
+    data_config: str,
+    action_dim: int = 32,
+    chunk_size: int = 16,
+    video_backend: str = "torchvision_av",
     device: str = "cuda",
 ) -> Dict[str, float]:
 
+    modality_path = os.path.join(dataset_path, LE_ROBOT_MODALITY_FILENAME)
+    modality_dict = read_json(modality_path)
+
     # load the policy
-    data_config = DATA_CONFIG_MAP["fourier_gr1_arms_only"]
-    modality_config = data_config.modality_config()
-    modality_transform = data_config.transform()
-    EMBODIMENT_TAG = "gr1"
+    data_config_obj = get_data_config(
+        name=data_config, modality_map=modality_dict, chunk_size=chunk_size, action_dim=action_dim
+    )
+    modality_config = data_config_obj.modality_config()
+    modality_transform = data_config_obj.transform()
+
+    if data_config in (
+        "fourier_gr1_arms_waist",
+        "fourier_gr1_arms_only",
+        "fourier_gr1_full_upper_body",
+    ):
+        EMBODIMENT_TAG = "gr1"
+    elif data_config == "oxe_droid":
+        EMBODIMENT_TAG = "oxe_droid"
+    elif data_config == "agibot_genie1":
+        EMBODIMENT_TAG = "agibot_genie1"
+    else:
+        EMBODIMENT_TAG = "new_embodiment"
+
     policy = Gr00tPolicy(
         model_path=model_path,
         embodiment_tag=EMBODIMENT_TAG,
@@ -409,7 +432,7 @@ def run_groot_inference(
     dataset = LeRobotSingleDataset(
         dataset_path=dataset_path,
         modality_configs=modality_config,
-        video_backend="decord",
+        video_backend=video_backend,
         video_backend_kwargs=None,
         transforms=None,  # We'll handle transforms separately through the policy
         embodiment_tag=EMBODIMENT_TAG,
@@ -443,6 +466,7 @@ if __name__ == "__main__":
         help="Path to the dataset",
         default=os.path.join(os.getcwd(), "demo_data/robot_sim.PickNPlace"),
     )
+
     parser.add_argument(
         "--model_path",
         type=str,
@@ -457,15 +481,54 @@ if __name__ == "__main__":
         default=os.path.join(os.getcwd(), "gr00t_onnx"),
     )
 
+    parser.add_argument(
+        "--data_config",
+        type=str,
+        choices=list(DATA_CONFIG_MAP.keys()) + list(DYNAMIC_DATA_CONFIG_MAP.keys()),
+        help=f"Data configuration name. Available options: {', '.join(list(DATA_CONFIG_MAP.keys()) + list(DYNAMIC_DATA_CONFIG_MAP.keys()))}",
+        default="extend_robotics_dynamic",
+    )
+
+    parser.add_argument(
+        "--action_dim",
+        type=int,
+        default=32,
+        help="Dimensionality of the action space",
+    )
+
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        default=16,
+        help="Size of each data chunk",
+    )
+
+    parser.add_argument(
+        "--video_backend",
+        type=str,
+        choices=["torchvision_av", "decord"],
+        default="torchvision_av",
+        help="Backend for video processing",
+    )
+
     args = parser.parse_args()
 
     print(f"Dataset path: {args.dataset_path}")
     print(f"Model path: {args.model_path}")
     print(f"ONNX model path: {args.onnx_model_path}")
+    print(f"Data config: {args.data_config}")
+    print(f"Action dim: {args.action_dim}")
+    print(f"Chunk size: {args.chunk_size}")
+    print(f"Video backend: {args.video_backend}")
+
     predicted_action = run_groot_inference(
         args.dataset_path,
         args.model_path,
         args.onnx_model_path,
+        data_config=args.data_config,
+        action_dim=args.action_dim,
+        chunk_size=args.chunk_size,
+        video_backend=args.video_backend,
     )
 
     for key, value in predicted_action.items():
