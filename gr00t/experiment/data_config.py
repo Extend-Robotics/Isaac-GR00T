@@ -882,7 +882,7 @@ class AgibotGenie1DataConfig:
 
 
 class ExtendRoboticsDataConfig(BaseDataConfig):
-    def __init__(self, modality_map: dict, chunk_size: int, action_dim: Optional[int]=None):
+    def __init__(self, modality_map: dict, chunk_size: int = 16, action_dim: int = 32):
         self.modality_map = modality_map
 
         # Extract keys and index ranges
@@ -892,7 +892,7 @@ class ExtendRoboticsDataConfig(BaseDataConfig):
         self.language_keys = ["annotation.human.task_description"]
         self.action_indices = list(range(chunk_size))
         self.action_dim = action_dim
-        self.observation_indices = [0] 
+        self.observation_indices = [0]
 
     def _extract_sorted_keys(self, modality_key) -> list[str]:
         modality_info = self.modality_map.get(modality_key, {})
@@ -901,10 +901,18 @@ class ExtendRoboticsDataConfig(BaseDataConfig):
 
     def modality_config(self) -> dict[str, ModalityConfig]:
         return {
-            "video": ModalityConfig(delta_indices=self.observation_indices, modality_keys=self.video_keys),
-            "state": ModalityConfig(delta_indices=self.observation_indices, modality_keys=self.state_keys),
-            "action": ModalityConfig(delta_indices=self.action_indices, modality_keys=self.action_keys),
-            "language": ModalityConfig(delta_indices=self.observation_indices, modality_keys=self.language_keys),
+            "video": ModalityConfig(
+                delta_indices=self.observation_indices, modality_keys=self.video_keys
+            ),
+            "state": ModalityConfig(
+                delta_indices=self.observation_indices, modality_keys=self.state_keys
+            ),
+            "action": ModalityConfig(
+                delta_indices=self.action_indices, modality_keys=self.action_keys
+            ),
+            "language": ModalityConfig(
+                delta_indices=self.observation_indices, modality_keys=self.language_keys
+            ),
         }
 
     def transform(self) -> ModalityTransform:
@@ -921,25 +929,21 @@ class ExtendRoboticsDataConfig(BaseDataConfig):
                 hue=0.08,
             ),
             VideoToNumpy(apply_to=self.video_keys),
-
             # state transforms
             StateActionToTensor(apply_to=self.state_keys),
             StateActionSinCosTransform(apply_to=self.state_keys),
-
             # action transforms
             StateActionToTensor(apply_to=self.action_keys),
             StateActionTransform(
                 apply_to=self.action_keys,
                 normalization_modes={key: "min_max" for key in self.action_keys},
             ),
-
             # concat transforms
             ConcatTransform(
                 video_concat_order=self.video_keys,
                 state_concat_order=self.state_keys,
                 action_concat_order=self.action_keys,
             ),
-
             # model-specific transform
             GR00TTransform(
                 state_horizon=len(self.observation_indices),
@@ -950,9 +954,10 @@ class ExtendRoboticsDataConfig(BaseDataConfig):
         ]
 
         return ComposedModalityTransform(transforms=transforms)
-    
+
+
 ###########################################################################################
-    
+
 
 DATA_CONFIG_MAP = {
     "fourier_gr1_arms_waist": FourierGr1ArmsWaistDataConfig(),
